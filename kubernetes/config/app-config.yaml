@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: app-config
+  namespace: devops-lab
+
+data:
+  AMBIENTE: "laboratorio"
+  APLICACAO: "devops-lab"
+  VERSAO: "1.0"

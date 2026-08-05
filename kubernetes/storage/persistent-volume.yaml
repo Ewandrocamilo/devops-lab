@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: PersistentVolume
+
+metadata:
+  name: devops-lab-pv
+
+spec:
+  capacity:
+    storage: 1Gi
+
+  accessModes:
+    - ReadWriteOnce
+
+  persistentVolumeReclaimPolicy: Retain
+
+  hostPath:
+    path: /mnt/devops-lab-pv

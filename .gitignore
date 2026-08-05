@@ -1,0 +1,20 @@
+# Logs
+*.log
+
+# Arquivos temporários
+*.tmp
+*.swp
+*~
+
+# Backups temporários
+*.bak
+
+# Diretórios de cache
+.cache/
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+
+# Arquivos temporários do FUSE
+.fuse_hidden*

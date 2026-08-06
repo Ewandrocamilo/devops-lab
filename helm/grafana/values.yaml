@@ -1,0 +1,8 @@
+replicas: 2
+
+service:
+  type: NodePort
+
+persistence:
+  enabled: true
+  size: 10Gi

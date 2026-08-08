@@ -1,4 +1,4 @@
-replicas: 2
+replicas: 1
 
 service:
   type: NodePort
@@ -6,3 +6,6 @@ service:
 persistence:
   enabled: true
   size: 10Gi
+
+initChownData:
+  enabled: false

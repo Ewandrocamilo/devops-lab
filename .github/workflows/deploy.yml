@@ -1,0 +1,30 @@
+name: Deploy DevOps Lab
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ~/devops-lab/devops-lab
+            git pull origin main
+            cd docker/app
+            docker build -t devops-lab-app .
+            docker stop devops-lab-app || true
+            docker rm devops-lab-app || true
+            docker run -d --name devops-lab-app -p 80:80 devops-lab-app
+

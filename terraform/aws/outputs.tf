@@ -19,11 +19,16 @@ output "instance_private_ip" {
 }
 
 output "instance_public_ip" {
-  description = "IP público da instância EC2"
-  value       = aws_instance.web.public_ip
+  description = "Elastic IP público da aplicação"
+  value       = aws_eip.web.public_ip
 }
 
 output "instance_public_dns" {
   description = "DNS público da instância EC2"
   value       = aws_instance.web.public_dns
+}
+
+output "elastic_ip" {
+  description = "Elastic IP fixo da aplicação"
+  value       = aws_eip.web.public_ip
 }

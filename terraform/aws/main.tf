@@ -135,3 +135,15 @@ resource "aws_iam_instance_profile" "ec2_ssm" {
   name = "devops-lab-ec2-ssm-profile"
   role = aws_iam_role.ec2_ssm.name
 }
+resource "aws_eip" "web" {
+  domain = "vpc"
+
+  tags = {
+    Name = "devops-lab-web-eip"
+  }
+}
+
+resource "aws_eip_association" "web" {
+  instance_id   = aws_instance.web.id
+  allocation_id = aws_eip.web.id
+}

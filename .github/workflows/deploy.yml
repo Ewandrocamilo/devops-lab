@@ -27,6 +27,7 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --parameters 'commands=[
               "cd /home/ubuntu/devops-lab/devops-lab",
+              "git config --global --add safe.directory /home/ubuntu/devops-lab/devops-lab",
               "git pull origin main",
               "cd docker/app",
               "git rev-parse --short HEAD",

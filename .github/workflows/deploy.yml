@@ -29,7 +29,7 @@ jobs:
               "cd /home/ubuntu/devops-lab/devops-lab",
               "git -c safe.directory=/home/ubuntu/devops-lab/devops-lab pull origin main",
               "cd docker/app",
-              "git rev-parse --short HEAD",
+              "git -c safe.directory=/home/ubuntu/devops-lab/devops-lab rev-parse --short HEAD",
               "docker build -t devops-lab-app .",
               "docker stop devops-lab-app || true",
               "docker rm devops-lab-app || true",

@@ -26,6 +26,7 @@ jobs:
             --instance-ids i-015425d152955bcfe \
             --document-name "AWS-RunShellScript" \
             --parameters 'commands=[
+              "set -e",
               "cd /home/ubuntu/devops-lab/devops-lab",
               "git -c safe.directory=/home/ubuntu/devops-lab/devops-lab pull origin main",
               "cd docker/app",

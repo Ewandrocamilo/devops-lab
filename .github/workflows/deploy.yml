@@ -1,6 +1,7 @@
 name: Deploy DevOps Lab static site
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main

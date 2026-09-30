@@ -21,5 +21,11 @@ services:
     ports:
       - "5000:5000"
 
+  dashboard:
+    build:
+      context: ./site
+    ports:
+      - "8081:80"
+
 volumes:
   postgres-data:

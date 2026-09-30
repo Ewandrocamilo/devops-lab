@@ -1,9 +1,12 @@
-name: Deploy DevOps Lab
+name: Deploy DevOps Lab static site
 
 on:
   push:
     branches:
       - main
+    paths:
+      - "site/**"
+      - ".github/workflows/deploy.yml"
 
 permissions:
   id-token: write
@@ -12,67 +15,32 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::921145018343:role/devops-lab-github-actions-role
           aws-region: us-east-1
 
-      - name: Deploy via SSM
+      - name: Validate deployment settings
+        env:
+          S3_BUCKET: ${{ vars.DASHBOARD_S3_BUCKET }}
+          CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.DASHBOARD_CLOUDFRONT_DISTRIBUTION_ID }}
         run: |
-          COMMAND_ID=$(aws ssm send-command \
-            --instance-ids i-015425d152955bcfe \
-            --document-name "AWS-RunShellScript" \
-            --parameters 'commands=[
-              "set -e",
-              "cd /home/ubuntu/devops-lab/devops-lab",
-              "git -c safe.directory=/home/ubuntu/devops-lab/devops-lab pull origin main",
-              "cd docker/app",
-              "git -c safe.directory=/home/ubuntu/devops-lab/devops-lab rev-parse --short HEAD",
-              "docker build -t devops-lab-app .",
-              "docker stop devops-lab-app || true",
-              "docker rm devops-lab-app || true",
-              "docker run -d --restart unless-stopped --name devops-lab-app -p 80:80 devops-lab-app"
-            ]' \
-            --query "Command.CommandId" \
-            --output text)
+          test -n "$S3_BUCKET" || { echo "Missing repository variable DASHBOARD_S3_BUCKET"; exit 1; }
+          test -n "$CLOUDFRONT_DISTRIBUTION_ID" || { echo "Missing repository variable DASHBOARD_CLOUDFRONT_DISTRIBUTION_ID"; exit 1; }
 
-          echo "SSM Command ID: $COMMAND_ID"
-
-          aws ssm wait command-executed \
-            --command-id "$COMMAND_ID" \
-            --instance-id i-015425d152955bcfe
-
-          echo "===== OUTPUT DA EC2 ====="
-
-          aws ssm get-command-invocation \
-            --command-id "$COMMAND_ID" \
-            --instance-id i-015425d152955bcfe \
-            --query "StandardOutputContent" \
-            --output text
-
-          echo "===== ERROS DA EC2 ====="
-
-          aws ssm get-command-invocation \
-            --command-id "$COMMAND_ID" \
-            --instance-id i-015425d152955bcfe \
-            --query "StandardErrorContent" \
-            --output text
-
-          STATUS=$(aws ssm get-command-invocation \
-            --command-id "$COMMAND_ID" \
-            --instance-id i-015425d152955bcfe \
-            --query "Status" \
-            --output text)
-
-          echo "===== STATUS FINAL ====="
-          echo "$STATUS"
-
-          if [ "$STATUS" != "Success" ]; then
-            echo "Deploy falhou."
-            exit 1
-          fi
-
-          echo "Deploy concluído com sucesso!"
+      - name: Publish static site
+        env:
+          S3_BUCKET: ${{ vars.DASHBOARD_S3_BUCKET }}
+          CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.DASHBOARD_CLOUDFRONT_DISTRIBUTION_ID }}
+        run: |
+          aws s3 cp site/index.html "s3://$S3_BUCKET/index.html" \
+            --content-type "text/html; charset=utf-8" \
+            --cache-control "no-cache, max-age=0"
+          aws cloudfront create-invalidation \
+            --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
+            --paths "/index.html" "/"

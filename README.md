@@ -6,6 +6,44 @@ O projeto acompanha minha transição de carreira para a área de DevOps, utiliz
 
 O objetivo é construir, administrar, automatizar e documentar uma infraestrutura próxima de cenários encontrados em ambientes reais, incluindo implantação de aplicações, armazenamento, monitoramento e troubleshooting.
 
+## Dashboard do projeto
+
+O dashboard é um site estático em `site/index.html`, hospedado em um bucket S3 privado e distribuído pelo CloudFront. Ele não consulta API, banco de dados ou cluster ao vivo. O deploy é automatizado pelo GitHub Actions com OIDC.
+
+### Prévia local
+
+```bash
+docker compose up --build -d dashboard
+```
+
+Abra [http://localhost:8081](http://localhost:8081). Esse serviço serve apenas os arquivos estáticos; API e PostgreSQL não são iniciados para a prévia.
+
+### Provisionar a hospedagem AWS
+
+O stack isolado está em `terraform/aws/static-site`. Informe um nome de bucket S3 globalmente único e rode:
+
+```bash
+cd terraform/aws/static-site
+terraform init
+terraform plan -var="site_bucket_name=SEU-NOME-UNICO"
+terraform apply -var="site_bucket_name=SEU-NOME-UNICO"
+```
+
+O Terraform cria o bucket privado, CloudFront com Origin Access Control e uma política IAM de deploy anexada ao role GitHub Actions já usado pelo projeto. Depois, cadastre nas variáveis do repositório GitHub os outputs `site_bucket_name` e `distribution_id` como `DASHBOARD_S3_BUCKET` e `DASHBOARD_CLOUDFRONT_DISTRIBUTION_ID`. Um push em `main` publica o site. O endereço público é o output `distribution_domain_name`.
+
+O stack EC2 existente em `terraform/aws` permanece separado e não é removido por esta migração. Depois de validar o site no CloudFront, revise o plano desse stack antes de decidir parar ou destruir recursos EC2; eles podem continuar gerando cobrança enquanto estiverem ativos.
+
+### Seções
+
+- **Overview** — resumo do projeto e do destino de hospedagem estática;
+- **Architecture** — navegador, CloudFront, bucket privado e fluxo de deploy;
+- **Infrastructure** — S3, CloudFront, Terraform e tecnologias do laboratório;
+- **CI / CD** — GitHub Actions, OIDC, publicação no S3 e invalidação de cache;
+- **Technical decisions** — escolhas atuais e trade-offs;
+- **Lessons learned** — troubleshooting de hospedagem e do laboratório.
+
+O Compose com API e PostgreSQL permanece para exercícios locais separados; esses serviços não são necessários para servir o site.
+
 ---
 
 ## 🎯 Objetivos
@@ -142,6 +180,18 @@ A documentação desses problemas faz parte do processo de aprendizado e busca r
 
 ```text
 devops-lab/
+├── site/
+│   ├── index.html
+│   └── Dockerfile
+│
+├── terraform/
+│   └── aws/
+│       └── static-site/
+│
+├── app/api/
+├── docker-compose.yml
+├── .github/workflows/deploy.yml
+│
 ├── docs/
 │   ├── storageclass.md
 │   ├── troubleshooting/
@@ -196,10 +246,6 @@ Entre os próximos objetivos estão:
 
 * evolução da observabilidade com Prometheus e Grafana;
 * aprofundamento em Helm;
-* CI/CD;
-* infraestrutura como código;
-* automação;
-* Terraform;
 * Ansible;
 * Rancher;
 * Istio;

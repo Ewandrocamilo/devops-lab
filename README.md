@@ -1,57 +1,85 @@
 # DevOps Lab
 
-Projeto de portfólio que reúne um dashboard estático e práticas de infraestrutura, automação e operação. O dashboard está publicado na AWS e documenta a arquitetura, as decisões técnicas, o pipeline e aprendizados do laboratório.
+Projeto de portfólio que demonstra infraestrutura como código e entrega automatizada de um site estático na AWS.
 
-**Site:** [d352ryjwl42oc2.cloudfront.net](https://d352ryjwl42oc2.cloudfront.net)
+**Demonstração:** [DevOps Lab](https://d352ryjwl42oc2.cloudfront.net)
 
-## Arquitetura atual
+## O que foi implementado
 
-```text
-Navegador → CloudFront → bucket S3 privado
-                         ↑
-GitHub Actions (OIDC) ───┘ publica site/index.html e invalida o cache
+- Dashboard responsivo em HTML, CSS e JavaScript, servido como arquivos estáticos.
+- Infraestrutura AWS definida com Terraform: bucket S3 privado, CloudFront, Origin Access Control e políticas de acesso.
+- Publicação contínua pelo GitHub Actions quando há alterações no site ou no workflow em `main`.
+- Autenticação do workflow na AWS por OIDC, sem chaves de acesso AWS armazenadas no GitHub.
+- Envio do site ao S3 e invalidação do cache do CloudFront após a publicação.
+- Prévia local do dashboard em um container Nginx via Docker Compose.
+
+## Arquitetura
+
+```mermaid
+flowchart LR
+    Dev[Alteração em site/] --> Git[GitHub · main]
+    Git --> Actions[GitHub Actions]
+    Actions -->|OIDC assume role IAM| AWS[AWS]
+    Actions -->|publica index.html| S3[(Bucket S3 privado)]
+    Actions -->|invalida cache| CF[CloudFront]
+    Browser[Navegador] -->|HTTPS| CF
+    CF -->|Origin Access Control| S3
 ```
 
-O site não faz consultas à API, ao PostgreSQL ou a um cluster Kubernetes. O bucket só permite leitura pelo CloudFront. O GitHub Actions recebe acesso temporário à AWS por OIDC.
+O bucket bloqueia acesso público. O CloudFront lê os arquivos por meio do Origin Access Control. A política de deploy limita o workflow ao envio da página e à invalidação da distribuição. O dashboard não consulta API, banco de dados ou cluster em tempo real.
 
-O dashboard apresenta Overview, Architecture, Infrastructure, CI/CD, Technical Decisions e Lessons Learned.
+## Tecnologias
+
+| Área | Tecnologias |
+| --- | --- |
+| Site | HTML, CSS e JavaScript |
+| Hospedagem | Amazon S3, CloudFront e Origin Access Control |
+| Infraestrutura como código | Terraform |
+| Entrega contínua | GitHub Actions e OIDC |
+| Prévia local | Docker, Docker Compose e Nginx |
 
 ## Executar a prévia local
 
-Com Docker Compose:
+Na raiz do repositório:
 
 ```bash
 docker compose up --build -d dashboard
 ```
 
-Abra [http://localhost:8081](http://localhost:8081). Esse comando inicia somente o servidor do site estático. A API Flask e o PostgreSQL definidos no Compose são exercícios locais opcionais e não fazem parte da hospedagem do dashboard.
+Acesse [http://localhost:8081](http://localhost:8081). A prévia do dashboard não inicia nem depende da API ou do PostgreSQL.
 
-## Deploy e infraestrutura AWS
+Para parar a prévia:
 
-O workflow em `.github/workflows/deploy.yml` publica o site quando há alterações em `site/` ou no próprio workflow em `main`. Também pode ser iniciado manualmente pela aba **Actions** do GitHub.
+```bash
+docker compose stop dashboard
+```
 
-O repositório configura duas variáveis de Actions:
+## Provisionar a hospedagem
 
-- `DASHBOARD_S3_BUCKET`
-- `DASHBOARD_CLOUDFRONT_DISTRIBUTION_ID`
+A configuração Terraform do site está em `terraform/aws/static-site`. Ela requer credenciais AWS com as permissões necessárias, um nome de bucket S3 globalmente único e a role OIDC do GitHub Actions referenciada pelo projeto.
 
-A infraestrutura atual do site está isolada em `terraform/aws/static-site`: bucket privado, CloudFront com Origin Access Control e permissão de deploy do GitHub Actions. Os outputs do Terraform incluem o nome do bucket, o ID da distribuição e o domínio público.
+```bash
+cd terraform/aws/static-site
+terraform init
+terraform plan -var="site_bucket_name=SEU_BUCKET_UNICO"
+terraform apply -var="site_bucket_name=SEU_BUCKET_UNICO"
+```
 
-## Laboratório Kubernetes (opcional)
+O workflow usa as variáveis do repositório `DASHBOARD_S3_BUCKET` e `DASHBOARD_CLOUDFRONT_DISTRIBUTION_ID`. Os outputs do Terraform fornecem esses valores e o domínio CloudFront.
 
-As pastas abaixo preservam exercícios independentes feitos durante a evolução do projeto. Elas documentam conhecimento prático, mas não são dependências do site publicado nem indicam que exista um cluster ativo:
+## Laboratório complementar
 
-- `kubernetes/`: manifests Kustomize para workloads de laboratório, configuração, armazenamento e ingress;
-- `helm/`: valores personalizados para Prometheus e Grafana;
-- `scripts/`: preparação de hosts Ubuntu, instalação do containerd e Kubernetes, inicialização e validação do cluster;
-- `docs/`: registros de troubleshooting de armazenamento e Grafana.
+O repositório também contém exercícios independentes de Kubernetes e automação desenvolvidos em etapas anteriores: manifests Kubernetes, configurações Helm, scripts Linux e registros de troubleshooting. Esses materiais documentam o laboratório local; não fazem parte da hospedagem nem do deploy do dashboard.
 
-Os manifests de frontend e backend usam imagens de demonstração. A API Flask em `app/api` e o PostgreSQL do Docker Compose também são uma prática local separada.
+## Estrutura principal
 
-## Terraform EC2 legado
-
-`terraform/aws` é um stack EC2 anterior e permanece separado do site estático. Não é necessário para servir o dashboard. Antes de aplicar mudanças nesse diretório, confira o plano: ele pode criar ou alterar recursos AWS que geram cobrança. Remover os arquivos do repositório não desligaria recursos que já estejam ativos.
-
-## Segurança
-
-O bucket do site não é público. Arquivos `.env`, estado Terraform (`*.tfstate`) e variáveis locais não devem ser versionados. Use `.env.example` apenas como referência para o stack local.
+```text
+site/                         Dashboard estático e imagem Docker
+terraform/aws/static-site/    Infraestrutura AWS do site
+.github/workflows/deploy.yml  Pipeline de publicação
+app/api/                      API Flask para exercícios locais
+kubernetes/                   Manifests do laboratório Kubernetes
+helm/                         Valores Helm de Prometheus e Grafana
+scripts/                      Automação do ambiente Linux/Kubernetes
+docs/                         Documentação e troubleshooting
+```
